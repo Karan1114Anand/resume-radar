@@ -1,0 +1,22 @@
+# Node / Next
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

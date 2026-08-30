@@ -1,0 +1,397 @@
+================================================================================
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+Product: ResumeRadar — AI-Powered Resume Job Matcher
+GitHub Repository: resume-radar
+Version: 1.1
+Date: August 30, 2026
+Status: Draft
+================================================================================
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+
+Product Name    : ResumeRadar
+GitHub Repo     : resume-radar  (github.com/<org>/resume-radar)
+Tagline         : "Upload your resume. Radar finds the rest."
+Type            : Web Application
+Target Users    : Job seekers (students, fresh graduates, working professionals)
+Primary Goal    : Automate job/internship discovery by analyzing a user's resume
+                  and surfacing the most relevant opportunities, along with the
+                  hiring contact and a ready-to-send outreach email.
+
+One-line pitch  : Upload your resume, pick a city — get the right jobs, the
+                  right contact, and the right email to send.
+
+
+--------------------------------------------------------------------------------
+2. PROBLEM STATEMENT
+--------------------------------------------------------------------------------
+
+Job seekers spend hours:
+  - Manually browsing job boards that return irrelevant results
+  - Guessing which roles actually match their skill set
+  - Hunting for the right person to contact at a company
+  - Writing cold emails from scratch with little idea of what works
+
+There is no single tool that connects resume analysis, role matching,
+contact discovery, and personalized outreach into one seamless workflow.
+
+
+--------------------------------------------------------------------------------
+3. GOALS AND SUCCESS METRICS
+--------------------------------------------------------------------------------
+
+Goal 1  : Reduce time from "resume ready" to "application sent" to under
+          10 minutes.
+
+Goal 2  : Surface only roles where at least 60% of the required skills
+          overlap with the user's resume.
+
+Goal 3  : Provide a verified or highly probable hiring contact for each
+          matched role.
+
+Goal 4  : Generate a personalized outreach email that references the user's
+          actual experience and the specific role.
+
+Success Metrics
+  - Time-to-first-application < 10 minutes (measured via session analytics)
+  - User satisfaction score >= 4.2 / 5.0
+  - Email open rate on generated drafts >= 35% (tracked via opt-in feedback)
+  - Match relevance rating >= 4.0 / 5.0 (post-session survey)
+
+
+--------------------------------------------------------------------------------
+4. TARGET USERS
+--------------------------------------------------------------------------------
+
+Persona A — Engineering Student (Primary)
+  Profile   : BTech / BE student, 2nd to 4th year or recent graduate
+  Goal      : Find internships or entry-level roles in their field
+  Pain Point: Does not know how to position themselves or who to reach out to
+
+Persona B — Working Professional (Secondary)
+  Profile   : 2–8 years of experience, looking to switch roles or companies
+  Goal      : Find mid-senior roles matching their current skill set
+  Pain Point: Too busy to search manually; wants targeted, high-signal leads
+
+Persona C — Career Switcher
+  Profile   : Professional pivoting to a new domain (e.g., from mechanical
+              engineering to product management or data analytics)
+  Goal      : Identify roles where transferable skills are valued
+  Pain Point: Unsure which roles are realistic given their background
+
+
+--------------------------------------------------------------------------------
+5. SCOPE — VERSION 1.0
+--------------------------------------------------------------------------------
+
+IN SCOPE
+  - PDF resume upload and AI-based parsing
+  - Skill, experience, and education extraction from resume
+  - Location selector (city / country / remote)
+  - AI-powered job/internship matching against live or cached listings
+  - Match score and reasoning for each result
+  - Hiring contact suggestion per role (name, title, LinkedIn, email if public)
+  - Personalized outreach email generation per role
+  - Copy-to-clipboard for email
+  - Basic user session (no login required for v1)
+
+OUT OF SCOPE (deferred to v2+)
+  - One-click application submission
+  - Resume editing / optimization suggestions
+  - ATS score / keyword gap analysis
+  - Saved searches and job alerts
+  - Company culture or salary benchmarking
+  - Mobile native apps
+
+
+--------------------------------------------------------------------------------
+6. FEATURE REQUIREMENTS
+--------------------------------------------------------------------------------
+
+6.1  RESUME UPLOAD AND PARSING
+  - Accept PDF files up to 5 MB
+  - Extract: full name, contact info, skills (technical and soft), work
+    experience (company, role, duration), education, certifications, projects
+  - Display a parsed summary to the user for confirmation before proceeding
+  - Flag if the resume cannot be parsed and prompt re-upload
+
+6.2  LOCATION SELECTION
+  - Allow selection of one or more cities / countries
+  - Include a "Remote" option
+  - Default to user's detected region (browser geolocation, no storage)
+
+6.3  JOB MATCHING
+  - Query job sources (API integrations or scraped data — see Section 8)
+  - Score each listing against the user's extracted profile using AI
+  - Return top 10 matched roles, ranked by match score (0–100)
+  - Each result must show:
+      * Job title and company name
+      * Location and work mode (remote / hybrid / on-site)
+      * Match score and a 2–3 line explanation of why it matched
+      * Date posted
+      * Link to the original job listing
+
+6.4  HIRING CONTACT DISCOVERY
+  - For each matched role, surface a relevant contact:
+      * Preferred: recruiter or HR contact at the company
+      * Fallback: hiring manager, team lead, or department head
+  - Show: name, job title, LinkedIn profile URL, email (if publicly available)
+  - Clearly indicate confidence level (Verified / Likely / Estimated)
+  - Do not fabricate contacts — show "Contact not found" if unavailable
+
+6.5  OUTREACH EMAIL GENERATION
+  - Generate a personalized cold email for each role that includes:
+      * A subject line tailored to the role
+      * A brief intro referencing the user's strongest relevant experience
+      * 1–2 specific skills that match the role requirements
+      * A clear, low-pressure call to action
+  - Keep emails under 200 words
+  - Provide a "Regenerate" option for a different tone or angle
+  - One-click copy to clipboard
+
+6.6  RESULTS PAGE — UI REQUIREMENTS
+  - Card layout: one card per matched job
+  - Each card expands to show contact details and email draft
+  - Filter bar: filter by match score, location, job type (internship / full-time)
+  - Loading state with progress indicator during analysis
+
+
+--------------------------------------------------------------------------------
+7. USER FLOW
+--------------------------------------------------------------------------------
+
+Step 1  : User lands on homepage
+          → Sees a clear CTA: "Upload your resume to find matching jobs"
+
+Step 2  : User uploads PDF resume
+          → System parses the resume using AI
+          → Displays extracted profile summary (skills, experience, education)
+          → User confirms or edits the summary
+
+Step 3  : User selects preferred location(s) and job type
+          (internship / full-time / both)
+
+Step 4  : System runs AI matching
+          → Shows a loading screen with status updates
+          → Returns top 10 matched roles
+
+Step 5  : User browses results
+          → Clicks a job card to expand details
+          → Views hiring contact and generated email
+
+Step 6  : User copies email, clicks through to job listing, or regenerates email
+
+Step 7  : Optional — user downloads the full results as a PDF or CSV
+
+
+--------------------------------------------------------------------------------
+8. TECHNICAL REQUIREMENTS
+--------------------------------------------------------------------------------
+
+8.1  FRONTEND (Deployed on Vercel)
+  - Framework      : Next.js 14+ (App Router)
+  - Hosting        : Vercel (auto-deploy from main branch of resume-radar repo)
+  - Styling        : Tailwind CSS
+  - File Upload    : Client-side PDF → base64 encoding before API call
+  - State          : Session-scoped via React state (no auth in v1)
+  - Env Variables  : NEXT_PUBLIC_API_URL pointing to the Render backend
+
+  Vercel Configuration (vercel.json)
+  - Root directory : /frontend
+  - Build command  : next build
+  - Output dir     : .next
+  - Environment    : NEXT_PUBLIC_API_URL, ANTHROPIC_API_KEY (if calling AI
+                     directly from Next.js API routes for lightweight ops)
+
+8.2  BACKEND (Deployed on Render)
+  - Framework      : FastAPI (Python) or Express.js (Node)
+  - Hosting        : Render Web Service (auto-deploy from resume-radar repo)
+  - Root directory : /backend
+  - Build command  : pip install -r requirements.txt  (or npm install)
+  - Start command  : uvicorn main:app --host 0.0.0.0 --port 8000
+                     (or node index.js for Node)
+  - Plan           : Render Starter ($7/month) or free tier for prototyping
+                     Note: Render free tier spins down after inactivity;
+                     upgrade to Starter for production use
+
+  Render Configuration (render.yaml — committed to repo root)
+  - Service type   : Web Service
+  - Region         : Oregon (us-west) or Singapore (ap-southeast) based on
+                     primary user base
+  - Health check   : GET /health → 200 OK
+
+  Backend Responsibilities
+  - PDF parsing via Claude API
+  - Job matching logic and scoring
+  - Contact discovery API orchestration
+  - Email generation via Claude API
+  - Rate limiting and abuse prevention
+
+8.3  REPOSITORY STRUCTURE
+
+  resume-radar/
+  ├── frontend/                  # Next.js app → deployed to Vercel
+  │   ├── app/
+  │   ├── components/
+  │   ├── public/
+  │   ├── .env.local.example
+  │   └── package.json
+  ├── backend/                   # FastAPI / Express → deployed to Render
+  │   ├── main.py (or index.js)
+  │   ├── routes/
+  │   ├── services/
+  │   ├── requirements.txt (or package.json)
+  │   └── .env.example
+  ├── render.yaml                # Render deploy config
+  ├── .github/
+  │   └── workflows/
+  │       ├── frontend-ci.yml    # Lint + test on PR
+  │       └── backend-ci.yml
+  └── README.md
+
+8.4  AI / BACKEND SERVICES
+  - Resume Parsing   : Claude API (claude-sonnet-4-6) via /v1/messages
+  - Job Matching     : Claude API with structured job listing data as context
+  - Email Generation : Claude API with resume summary + job description
+  - Web Search       : Anthropic web_search tool for live job discovery
+
+8.5  JOB DATA SOURCES (priority order)
+  1. LinkedIn Jobs API (or approved scraping methods)
+  2. Indeed API / Glassdoor API
+  3. Naukri API (India-specific)
+  4. Internshala API (internships, India)
+  5. Remotive / WeWorkRemotely (remote roles)
+
+8.6  CONTACT DISCOVERY
+  - LinkedIn People Search (via API or approved integration)
+  - Hunter.io or similar email finder API (with confidence scoring)
+  - Fallback: publicly listed company page contacts
+
+8.7  DATA PRIVACY
+  - Resume content is not stored after the session ends
+  - No PII is sent to third parties beyond what is needed for matching
+  - User must acknowledge a privacy notice before upload
+  - Backend does not write resume files to disk; processes in memory only
+
+8.8  PERFORMANCE TARGETS
+  - Resume parsing        < 5 seconds
+  - Job matching + contact discovery < 20 seconds total
+  - Email generation per role < 3 seconds
+  - Vercel cold start     < 1 second (Edge runtime for lightweight routes)
+  - Render cold start     < 3 seconds (on paid plan; ~30s on free tier)
+
+
+--------------------------------------------------------------------------------
+9. NON-FUNCTIONAL REQUIREMENTS
+--------------------------------------------------------------------------------
+
+  - Availability    : 99.5% uptime SLA (Vercel SLA; Render Starter SLA)
+  - Responsiveness  : Works on desktop and tablet (mobile-optimized in v2)
+  - Accessibility   : WCAG 2.1 AA compliance
+  - Security        : HTTPS only (enforced by both Vercel and Render by default)
+                      Resume files not written to disk
+                      API keys stored in platform environment variables only —
+                      never committed to the repo
+  - Rate Limiting   : Max 3 sessions per IP per hour (middleware on Render)
+  - Compliance      : GDPR-compatible; DPDP Act 2023 compliant (India)
+  - CORS            : Backend allows requests only from the Vercel frontend domain
+
+
+--------------------------------------------------------------------------------
+10. ENVIRONMENT VARIABLES
+--------------------------------------------------------------------------------
+
+Frontend (.env.local)
+  NEXT_PUBLIC_API_URL          = https://resume-radar-api.onrender.com
+
+Backend (.env)
+  ANTHROPIC_API_KEY            = sk-ant-...
+  HUNTER_API_KEY               = ...
+  LINKEDIN_API_KEY             = ...
+  INDEED_API_KEY               = ...
+  ALLOWED_ORIGIN               = https://resume-radar.vercel.app
+  RATE_LIMIT_MAX               = 3
+  RATE_LIMIT_WINDOW_MINUTES    = 60
+
+
+--------------------------------------------------------------------------------
+11. ASSUMPTIONS AND CONSTRAINTS
+--------------------------------------------------------------------------------
+
+  - Users have a reasonably well-formatted PDF resume (not scanned images)
+  - Job listing APIs will be available under a paid tier
+  - Contact discovery is best-effort; not all roles will have verified contacts
+  - Email generation is a draft; users are responsible for sending it
+  - v1 will not support non-English resumes
+  - Render free tier is acceptable for prototyping but not production
+  - Vercel hobby plan is acceptable for frontend in early stages
+
+
+--------------------------------------------------------------------------------
+12. RISKS AND MITIGATIONS
+--------------------------------------------------------------------------------
+
+Risk 1  : Low-quality resume parsing for poorly formatted PDFs
+          Mitigation: Detect low-text PDFs and prompt user to re-upload or
+          use a text-based version
+
+Risk 2  : Job listing APIs may have rate limits or go down
+          Mitigation: Cache recent listings; maintain fallback to at least
+          two job sources
+
+Risk 3  : Contact details may be outdated or inaccurate
+          Mitigation: Show confidence level prominently; disclaim that users
+          should verify before reaching out
+
+Risk 4  : Generated emails may feel generic despite personalization
+          Mitigation: Allow users to provide additional context to improve output
+
+Risk 5  : Misuse — bulk email generation or spam
+          Mitigation: Rate limiting, session caps, and usage monitoring
+
+Risk 6  : Render free tier spin-down causing poor first-load experience
+          Mitigation: Upgrade to Render Starter ($7/month) before beta launch;
+          add a frontend loading indicator that accounts for cold start latency
+
+
+--------------------------------------------------------------------------------
+13. MILESTONES AND TIMELINE
+--------------------------------------------------------------------------------
+
+Week 1–2   : Repo setup (resume-radar), CI/CD pipeline, Vercel + Render
+             deploy scaffolding, environment variable configuration
+Week 3–4   : Resume parsing pipeline and profile extraction (Claude API)
+Week 5–6   : Job matching algorithm, scoring logic, job source integrations
+Week 7–8   : Contact discovery, email generation, results UI
+Week 9     : Internal QA, edge case testing, privacy review, CORS hardening
+Week 10    : Beta release to 50 test users
+Week 11–12 : Feedback incorporation, performance tuning, Render plan upgrade
+Week 13    : Public v1 launch
+
+
+--------------------------------------------------------------------------------
+14. OPEN QUESTIONS
+--------------------------------------------------------------------------------
+
+  Q1  : Should users be able to save results across sessions? (Requires auth)
+  Q2  : Do we support resumes in languages other than English in v1.5?
+  Q3  : Which contact-finder API offers the best accuracy-to-cost ratio?
+  Q4  : Should we allow bulk upload (e.g., a team of students uploading at once)?
+  Q5  : What is the monetization model — freemium, per-use credits, or B2B?
+  Q6  : Use Render's managed PostgreSQL for session/cache storage in v2?
+
+
+--------------------------------------------------------------------------------
+15. APPROVALS
+--------------------------------------------------------------------------------
+
+  Product Owner   : ______________________________    Date: ___________
+  Tech Lead       : ______________________________    Date: ___________
+  Design Lead     : ______________________________    Date: ___________
+
+
+================================================================================
+END OF DOCUMENT — ResumeRadar PRD v1.1
+================================================================================
