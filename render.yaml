@@ -7,6 +7,8 @@ services:
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.9"
       - key: GROQ_API_KEY
         sync: false
       - key: TAVILY_API_KEY
