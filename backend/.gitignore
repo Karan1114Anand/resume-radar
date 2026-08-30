@@ -1,0 +1,10 @@
+# Keep secrets out of the backend deploy repo (Hugging Face Space)
+.env
+.env.*
+!.env.example
+
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
