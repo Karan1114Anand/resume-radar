@@ -3,8 +3,10 @@ title: ResumeRadar API
 emoji: 📡
 colorFrom: blue
 colorTo: gray
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 5.9.1
+app_file: app.py
+python_version: "3.12"
 pinned: false
 ---
 
@@ -13,6 +15,10 @@ pinned: false
 FastAPI backend for ResumeRadar — resume parsing, job matching, hiring-contact
 lookup and outreach-email drafting. Text generation runs on Groq; web search on
 Tavily. See the project repository for full documentation.
+
+The Space runs the **Gradio SDK** (this account has no Docker SDK access):
+`app.py` mounts a small status page onto the FastAPI app in `main.py` and serves
+it with uvicorn on port 7860. All real endpoints are the FastAPI routes below.
 
 ## Required secrets / variables
 
