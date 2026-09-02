@@ -1,5 +1,5 @@
 fastapi==0.141.1
-starlette==1.6.0
+starlette==0.52.1
 uvicorn[standard]==0.34.0
 python-multipart==0.0.32
 groq==1.7.0

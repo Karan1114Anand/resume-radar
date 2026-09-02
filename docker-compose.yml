@@ -1,0 +1,31 @@
+# Full local stack: FastAPI backend + Next.js frontend.
+#   docker compose up --build
+# Backend reads secrets from backend/.env (git-ignored). Copy backend/.env.example
+# to backend/.env and fill in the keys first.
+
+services:
+  backend:
+    build: ./backend
+    image: resumeradar-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      ALLOWED_ORIGIN: "http://localhost:3000"
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the JS bundle at build time. Point it at wherever the
+        # browser will reach the backend (localhost in dev).
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    image: resumeradar-frontend:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
