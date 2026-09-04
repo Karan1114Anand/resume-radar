@@ -1,0 +1,26 @@
+# Build the frontend image with NEXT_PUBLIC_API_URL baked in.
+# NEXT_PUBLIC_* is inlined into the JS bundle at build time, so it can't be a
+# Cloud Run runtime env var — it has to be a --build-arg, which needs Cloud Build.
+#
+#   gcloud builds submit ./frontend --config=frontend/cloudbuild.yaml \
+#     --substitutions=_API_URL=https://your-backend-url,_IMAGE=REGION-docker.pkg.dev/PROJECT/resumeradar/frontend:latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg=NEXT_PUBLIC_API_URL=${_API_URL}
+      - --tag=${_IMAGE}
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args: [push, "${_IMAGE}"]
+
+images:
+  - ${_IMAGE}
+
+substitutions:
+  _API_URL: ""
+  _IMAGE: ""
+
+options:
+  logging: CLOUD_LOGGING_ONLY
