@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, RotateCw, SearchX } from "lucide-react";
 import { matchJobs, getErrorMessage, statusOf, type Job } from "@/lib/api";
+import { PROFILE_LABELS } from "@/lib/profiles";
 import { readInputs, readJobs, writeJobs, type StoredInputs } from "@/lib/storage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { JobCard } from "@/components/JobCard";
@@ -24,7 +25,12 @@ export default function AnalyzePage() {
     setError("");
     setNotFound(false);
     try {
-      const result = await matchJobs(data.profile, data.locations, data.job_type);
+      const result = await matchJobs(
+        data.profile,
+        data.locations,
+        data.job_type,
+        data.job_profile ?? "Auto",
+      );
       setJobs(result);
       writeJobs(result);
     } catch (e) {
@@ -124,6 +130,9 @@ export default function AnalyzePage() {
           <p className="text-sm text-faded">
             {jobs?.length ?? 0} roles for {inputs.job_type.toLowerCase()} ·{" "}
             {inputs.locations.join(", ")}
+            {inputs.job_profile && inputs.job_profile !== "Auto" && (
+              <> · {PROFILE_LABELS[inputs.job_profile] ?? inputs.job_profile}</>
+            )}
           </p>
         </div>
         <Link href="/">

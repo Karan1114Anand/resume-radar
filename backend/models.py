@@ -32,6 +32,8 @@ class MatchJobsRequest(BaseModel):
     profile: ResumeProfile
     locations: list[str] = Field(default_factory=list)
     job_type: str = "Both"
+    # Discipline to search in (see profiles.py). "Auto" infers it from the resume.
+    job_profile: str = "Auto"
 
 
 class Job(BaseModel):

@@ -50,9 +50,51 @@ Backend: `GROQ_API_KEY`, `TAVILY_API_KEY`, `LLM_MODEL` (default
 `openai/gpt-oss-20b`), `ALLOWED_ORIGIN`, `RATE_LIMIT_MAX` (default 8),
 `RATE_LIMIT_WINDOW_MINUTES` (default 60).
 
+The backend keys are the *shared demo quota*. They are optional: with neither set,
+the app still runs for visitors who supply their own keys, and anonymous requests
+get a 503 explaining that.
+
+## Job profiles
+
+A search is scoped by *discipline* as well as by employment type. `POST
+/match-jobs` takes `job_profile` alongside `job_type`; `GET /job-profiles` lists
+the options. The catalogue lives in `backend/profiles.py`, mirrored for the UI in
+`frontend/lib/profiles.ts`.
+
+Profiles: GenAI / LLM, Machine Learning, Data Science, Data Engineering, MLOps /
+Platform, Computer Vision, NLP, Backend / API, Full-Stack, AI Research — plus
+`Auto`, which infers the discipline from the résumé's skills and past roles and
+falls back to the old skill-derived query when nothing scores high enough.
+
+Each profile holds several real-world title phrases, issued as **separate**
+search queries rather than one OR-joined query. Probing Tavily showed a single
+clean phrase returns far more job-board results than a synonym-stuffed boolean
+one — `generative AI engineer internship Bangalore` gave 5/7 board hits versus
+1/10 for the OR-expanded form, because semantic search dilutes when handed
+alternatives. The selected discipline is also passed to the ranking prompt so
+off-discipline listings are dropped rather than merely ranked lower.
+
+## Bring-your-own API keys
+
+Every route accepts optional `X-Groq-Key` and `X-Tavily-Key` headers
+(`backend/keys.py`).
+
+- **Both headers present** — the request runs entirely on the caller's quota and
+  skips the per-IP rate limit.
+- **Neither present** — the request falls back to the server's keys and is rate
+  limited (`RATE_LIMIT_MAX` per `RATE_LIMIT_WINDOW_MINUTES`).
+- **Only one present** — rejected with 400, so a caller cannot drain one of the
+  server's quotas while appearing to bring their own.
+
+Keys are used for the lifetime of a single request: never stored, never logged.
+In the UI, the "Use your own API keys" panel on the upload page holds them in
+`sessionStorage`, so they are gone when the tab closes, and `lib/api.ts` attaches
+them to each request.
+
 ## Notes
 
 - Text generation (Groq) and web search (Tavily) are separate services in
   `backend/services/`. Routes orchestrate the two; the LLM never fetches URLs.
 - Free-tier limits apply: Groq `gpt-oss-20b` ~500k tokens/day, Tavily 1,000
-  searches/month. For real public traffic a paid Groq plan is required.
+  searches/month. The shared quota is there so a first-time visitor can try the
+  app; heavier use is expected to bring its own keys.

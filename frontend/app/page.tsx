@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, Check, Coffee, Monitor, Phone, X } from "lucide-react";
+import { ApiKeyPanel } from "@/components/ApiKeyPanel";
 import { UploadZone } from "@/components/UploadZone";
 import { ProfileSummaryCard } from "@/components/ProfileSummaryCard";
 import { OfficeScene } from "@/components/OfficeScene";
 import { TalkingHead } from "@/components/TalkingHead";
 import { Button } from "@/components/Button";
 import { getErrorMessage, parseResume, type ResumeProfile } from "@/lib/api";
+import { JOB_PROFILES } from "@/lib/profiles";
 import { INPUTS_KEY, JOBS_KEY } from "@/lib/storage";
 
 type Step = "upload" | "confirm" | "preferences";
 
 const QUICK_CITIES = ["Remote", "Bangalore", "Mumbai", "Delhi NCR", "Hyderabad", "Pune", "London", "New York"];
 const JOB_TYPES = ["Internship", "Full-time", "Both"] as const;
+
 
 export default function LandingPage() {
   const router = useRouter();
@@ -29,6 +32,7 @@ export default function LandingPage() {
   const [locations, setLocations] = useState<string[]>(["Remote"]);
   const [cityInput, setCityInput] = useState("");
   const [jobType, setJobType] = useState<(typeof JOB_TYPES)[number]>("Both");
+  const [jobProfile, setJobProfile] = useState<string>("Auto");
   const [submitting, setSubmitting] = useState(false);
 
   async function analyze() {
@@ -57,7 +61,10 @@ export default function LandingPage() {
   function findJobs() {
     if (!profile || locations.length === 0) return;
     setSubmitting(true);
-    sessionStorage.setItem(INPUTS_KEY, JSON.stringify({ profile, locations, job_type: jobType }));
+    sessionStorage.setItem(
+      INPUTS_KEY,
+      JSON.stringify({ profile, locations, job_type: jobType, job_profile: jobProfile }),
+    );
     sessionStorage.removeItem(JOBS_KEY);
     router.push("/analyze");
   }
@@ -96,6 +103,8 @@ export default function LandingPage() {
             {parsing ? "Analyzing résumé…" : "Analyze résumé"}
             {!parsing && <ArrowRight className="h-4 w-4" aria-hidden />}
           </Button>
+
+          <ApiKeyPanel />
 
           <ul className="mt-10 grid gap-4 sm:grid-cols-3">
             <HowItWorks icon={<Monitor className="h-5 w-5" aria-hidden />} title="Reception" n={1}>
@@ -204,6 +213,31 @@ export default function LandingPage() {
                   } ${jobType === t ? "bg-corp text-cream" : "text-ink hover:bg-parchment"}`}
                 >
                   {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-typewriter text-sm uppercase tracking-widest text-ink">
+              Field of work
+            </h2>
+            <p className="mt-1 text-[12px] text-ink/60">
+              Narrows the search to one discipline. Auto-detect reads it off your résumé.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {JOB_PROFILES.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setJobProfile(p.id)}
+                  aria-pressed={jobProfile === p.id}
+                  className={`rounded-sm border px-3 py-1.5 font-typewriter text-xs uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-corp ${
+                    jobProfile === p.id
+                      ? "border-ink bg-corp text-cream"
+                      : "border-ink/40 bg-cream text-ink hover:bg-parchment"
+                  }`}
+                >
+                  {p.label}
                 </button>
               ))}
             </div>
