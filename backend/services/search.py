@@ -9,7 +9,6 @@ here.
 from __future__ import annotations
 
 import concurrent.futures
-import os
 from typing import TypedDict
 
 import httpx
@@ -23,11 +22,10 @@ class SearchResult(TypedDict):
     snippet: str
 
 
-def search(query: str, max_results: int = 8) -> list[SearchResult]:
+def search(api_key: str, query: str, max_results: int = 8) -> list[SearchResult]:
     """Run one Tavily search. Returns [] on any failure rather than raising."""
-    key = os.getenv("TAVILY_API_KEY")
+    key = (api_key or "").strip()
     if not key:
-        print("search: TAVILY_API_KEY not set — returning no results")
         return []
 
     try:
@@ -63,13 +61,13 @@ def search(query: str, max_results: int = 8) -> list[SearchResult]:
     return results
 
 
-def search_many(queries: list[str], per_query: int = 6) -> list[SearchResult]:
+def search_many(api_key: str, queries: list[str], per_query: int = 6) -> list[SearchResult]:
     """Fan out several queries in parallel, de-duplicate by URL, preserve order."""
     seen: set[str] = set()
     merged: list[SearchResult] = []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries) or 1, 5)) as pool:
-        for batch in pool.map(lambda q: search(q, per_query), queries):
+        for batch in pool.map(lambda q: search(api_key, q, per_query), queries):
             for item in batch:
                 if item["url"] in seen:
                     continue

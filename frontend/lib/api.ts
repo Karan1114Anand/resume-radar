@@ -1,8 +1,25 @@
 import axios from "axios";
 
+import { readKeys } from "./storage";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const client = axios.create({ baseURL: API_URL, timeout: 120000 });
+
+/**
+ * Attach the visitor's own provider keys, when they have supplied them, to
+ * every request. Without them the backend falls back to its shared demo quota,
+ * which is rate limited per IP. Read at request time rather than at module load
+ * so keys entered mid-session take effect immediately.
+ */
+client.interceptors.request.use((config) => {
+  const keys = typeof window === "undefined" ? null : readKeys();
+  if (keys) {
+    config.headers.set("X-Groq-Key", keys.groq);
+    config.headers.set("X-Tavily-Key", keys.tavily);
+  }
+  return config;
+});
 
 export function statusOf(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -74,11 +91,13 @@ export async function matchJobs(
   profile: ResumeProfile,
   locations: string[],
   jobType: string,
+  jobProfile = "Auto",
 ): Promise<Job[]> {
   const { data } = await client.post("/match-jobs", {
     profile,
     locations,
     job_type: jobType,
+    job_profile: jobProfile,
   });
   return data;
 }

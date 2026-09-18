@@ -20,14 +20,14 @@ from services.search import SearchResult, as_context
 
 MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
 
-_client: Groq | None = None
 
+def client(api_key: str) -> Groq:
+    """A Groq client for one request's key.
 
-def client() -> Groq:
-    global _client
-    if _client is None:
-        _client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    return _client
+    Deliberately not cached: the key varies per request now that callers may
+    bring their own, and a module-level client would pin the first key seen.
+    """
+    return Groq(api_key=api_key)
 
 
 def _content(response: Any) -> str:
@@ -52,8 +52,10 @@ def _json_from_text(raw: str) -> Any:
         raise
 
 
-def _structured(system: str, user: str, name: str, schema: dict, max_tokens: int) -> Any:
-    response = client().chat.completions.create(
+def _structured(
+    api_key: str, system: str, user: str, name: str, schema: dict, max_tokens: int
+) -> Any:
+    response = client(api_key).chat.completions.create(
         model=MODEL,
         max_completion_tokens=max_tokens,
         messages=[
@@ -129,8 +131,10 @@ _PARSE_SYSTEM = (
 )
 
 
-def extract_profile(resume_text: str) -> dict:
-    return _structured(_PARSE_SYSTEM, resume_text, "resume_profile", _PROFILE_SCHEMA, 4000)
+def extract_profile(api_key: str, resume_text: str) -> dict:
+    return _structured(
+        api_key, _PARSE_SYSTEM, resume_text, "resume_profile", _PROFILE_SCHEMA, 4000
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -174,15 +178,25 @@ _JOBS_SCHEMA = {
 
 
 def rank_jobs(
+    api_key: str,
     profile: dict,
     locations: list[str],
     job_type: str,
     results: list[SearchResult],
+    job_profile: str = "",
 ) -> list[dict]:
     """Turn raw web-search hits into scored, structured job matches."""
+    focus = (
+        f"\nThe candidate is specifically looking for {job_profile} roles. Rank "
+        f"listings in that discipline highest, and drop listings from unrelated "
+        f"disciplines even if the candidate's general skills would fit them.\n"
+        if job_profile
+        else ""
+    )
     system = (
         "You are a job-matching engine. You are given real web-search results for "
         "job listings plus a candidate profile. Select and rank the best matches.\n"
+        f"{focus}"
         "Rules: use ONLY listings present in the search results — never invent a "
         "company, title, or URL. Copy each url verbatim from the results. Score "
         "0-100 by skill / seniority / location overlap. match_reason is 2-3 "
@@ -197,10 +211,11 @@ def rank_jobs(
     user = (
         f"Candidate profile (JSON):\n{json.dumps(profile, indent=2)}\n\n"
         f"Preferred locations: {', '.join(locations) or 'Any'}\n"
-        f"Job type: {job_type}\n\n"
-        f"Search results:\n{as_context(results)}"
+        f"Job type: {job_type}\n"
+        + (f"Target discipline: {job_profile}\n" if job_profile else "")
+        + f"\nSearch results:\n{as_context(results)}"
     )
-    data = _structured(system, user, "job_matches", _JOBS_SCHEMA, 3500)
+    data = _structured(api_key, system, user, "job_matches", _JOBS_SCHEMA, 3500)
     jobs = data.get("jobs", []) if isinstance(data, dict) else []
     return jobs[:10]
 
@@ -224,7 +239,9 @@ _CONTACT_SCHEMA = {
 }
 
 
-def extract_contact(company: str, job_title: str, results: list[SearchResult]) -> dict:
+def extract_contact(
+    api_key: str, company: str, job_title: str, results: list[SearchResult]
+) -> dict:
     """Pull one hiring contact out of web-search results, or report none found."""
     system = (
         "You extract a single hiring contact from real web-search results. Prefer "
@@ -240,7 +257,7 @@ def extract_contact(company: str, job_title: str, results: list[SearchResult]) -
         f"Company: {company}\nRole: {job_title}\n\n"
         f"Search results:\n{as_context(results)}"
     )
-    data = _structured(system, user, "hiring_contact", _CONTACT_SCHEMA, 1200)
+    data = _structured(api_key, system, user, "hiring_contact", _CONTACT_SCHEMA, 1200)
     if not isinstance(data, dict) or not data.get("found") or not data.get("name"):
         return {"found": False}
     return data
@@ -366,7 +383,7 @@ def _finalize_email(email: dict, profile: dict, job: dict | None = None) -> dict
     }
 
 
-def generate_email(profile: dict, job: dict, contact: dict) -> dict:
+def generate_email(api_key: str, profile: dict, job: dict, contact: dict) -> dict:
     user = (
         "Write a cold outreach email FROM THE JOB SEEKER about this role.\n\n"
         f"Job seeker profile:\n{json.dumps(profile, indent=2)}\n\n"
@@ -374,6 +391,7 @@ def generate_email(profile: dict, job: dict, contact: dict) -> dict:
         f"{_greeting(contact)}\n\n{_EMAIL_RULES}"
     )
     email = _structured(
+        api_key,
         "You write concise first-person cold outreach emails for job seekers.",
         user,
         "outreach_email",
@@ -398,7 +416,9 @@ _OUTREACH_SCHEMA = {
 }
 
 
-def draft_outreach(profile: dict, job: dict, results: list[SearchResult]) -> dict:
+def draft_outreach(
+    api_key: str, profile: dict, job: dict, results: list[SearchResult]
+) -> dict:
     """One LLM call: extract a hiring contact from search results + write the email.
 
     Replaces a separate ``extract_contact`` + ``generate_email`` round-trip so a
@@ -421,7 +441,7 @@ def draft_outreach(profile: dict, job: dict, results: list[SearchResult]) -> dic
         f"Target role (JSON):\n{json.dumps(job, indent=2)}\n\n"
         f"Web-search results for a contact:\n{as_context(results)}"
     )
-    data = _structured(system, user, "outreach_draft", _OUTREACH_SCHEMA, 2600)
+    data = _structured(api_key, system, user, "outreach_draft", _OUTREACH_SCHEMA, 2600)
     contact = data.get("contact", {}) if isinstance(data, dict) else {}
     if not contact.get("found") or not contact.get("name"):
         contact = {"found": False, "name": "", "title": "", "linkedin_url": "", "email": "", "confidence": ""}

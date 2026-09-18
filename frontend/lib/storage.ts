@@ -2,12 +2,58 @@ import type { Job, OutreachDraft, ResumeProfile } from "./api";
 
 export const INPUTS_KEY = "resumeradar:inputs";
 export const JOBS_KEY = "resumeradar:jobs";
+export const KEYS_KEY = "resumeradar:keys";
 const DRAFT_PREFIX = "resumeradar:draft:";
+
+/** A visitor's own provider keys. Both are required for the backend to use them. */
+export interface ApiKeys {
+  groq: string;
+  tavily: string;
+}
+
+/**
+ * Keys live in sessionStorage, not localStorage: they are secrets, so they
+ * should not outlive the tab. The backend uses them per request and never
+ * stores them.
+ */
+export function readKeys(): ApiKeys | null {
+  try {
+    const raw = sessionStorage.getItem(KEYS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ApiKeys>;
+    const groq = (parsed.groq ?? "").trim();
+    const tavily = (parsed.tavily ?? "").trim();
+    return groq && tavily ? { groq, tavily } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeKeys(keys: ApiKeys): void {
+  try {
+    sessionStorage.setItem(
+      KEYS_KEY,
+      JSON.stringify({ groq: keys.groq.trim(), tavily: keys.tavily.trim() }),
+    );
+  } catch {
+    /* storage unavailable — non-fatal */
+  }
+}
+
+export function clearKeys(): void {
+  try {
+    sessionStorage.removeItem(KEYS_KEY);
+  } catch {
+    /* storage unavailable — non-fatal */
+  }
+}
 
 export interface StoredInputs {
   profile: ResumeProfile;
   locations: string[];
   job_type: string;
+  /** Discipline id from backend/profiles.py; "Auto" infers from the résumé. */
+  job_profile?: string;
 }
 
 export function readInputs(): StoredInputs | null {

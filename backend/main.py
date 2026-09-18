@@ -51,7 +51,9 @@ app.add_middleware(
     allow_origins=[o.strip() for o in ALLOWED_ORIGIN.split(",") if o.strip()],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    # X-Groq-Key / X-Tavily-Key carry a visitor's own API keys (see keys.py);
+    # without them listed here the browser's preflight blocks the request.
+    allow_headers=["Content-Type", "X-Groq-Key", "X-Tavily-Key"],
 )
 
 

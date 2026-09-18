@@ -6,7 +6,7 @@ from pypdf import PdfReader
 from models import ResumeProfile
 from groq import APIStatusError
 
-from ratelimit import rate_limit
+import keys
 from services import llm
 
 router = APIRouter()
@@ -17,8 +17,11 @@ MAX_TEXT_CHARS = 60_000  # trim before sending to the LLM (token cost / prompt a
 MIN_TEXT_CHARS = 150  # below this we treat the PDF as unparseable (scanned image)
 
 
-@router.post("/parse-resume", response_model=ResumeProfile, dependencies=[Depends(rate_limit)])
-async def parse_resume(file: UploadFile = File(...)) -> ResumeProfile:
+@router.post("/parse-resume", response_model=ResumeProfile)
+async def parse_resume(
+    file: UploadFile = File(...),
+    creds: keys.Keys = Depends(keys.resolve),
+) -> ResumeProfile:
     if (file.content_type or "").lower() not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Please upload a PDF file.")
     if file.size is not None and file.size > MAX_BYTES:
@@ -56,7 +59,7 @@ async def parse_resume(file: UploadFile = File(...)) -> ResumeProfile:
         )
 
     try:
-        profile = llm.extract_profile(text)
+        profile = llm.extract_profile(creds.groq, text)
     except APIStatusError:
         raise  # handled globally in main.py
     except Exception:  # noqa: BLE001
